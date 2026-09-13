@@ -8,3 +8,4 @@ raw/
 __pycache__/
 .env
 exports/mart_ml_training_set.csv
+.user.yml
