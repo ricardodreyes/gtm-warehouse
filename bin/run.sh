@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="/opt/homebrew/bin:$HOME/.local/bin:$PATH"
 
+[[ -f .env ]] && set -a && source .env && set +a
 SRC="${GTM_RAW_SRC:-$HOME/signet/outreach/app-leads}"
 DAY="$(date +%F)"
 LOG="logs/run-$(date +%F-%H%M%S).log"
@@ -17,6 +18,9 @@ ln -sfn "$DAY" raw/latest
 {
   echo "run started $(date -Iseconds) raw=$DAY"
   uv run dbt build --no-use-colors
+  if [[ -n "${GTM_S3_BUCKET:-}" ]]; then
+    aws s3 sync raw/ "s3://$GTM_S3_BUCKET/raw/" --profile "${AWS_PROFILE:-default}"
+  fi
   echo "run finished $(date -Iseconds)"
 } 2>&1 | tee "$LOG"
 exit "${PIPESTATUS[0]}"

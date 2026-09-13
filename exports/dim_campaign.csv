@@ -1,0 +1,4 @@
+campaign_id,campaign_name,variant,call_to_action,touches,first_sent_on
+pitch-b,Pitch variant B,B,curl against the demo redaction endpoint,1,2026-08-13
+research,Discovery,discovery,one question about past behavior,1,2026-08-16
+pitch-c,Pitch variant C,C,forward-ask to whoever filled in the Shopify data declaration,2,2026-09-01

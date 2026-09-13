@@ -15,7 +15,7 @@ Why each table has the grain it has. Read this before adding a model.
 
 ## The two candidates, and which one won
 
-**Candidate 1, batch as the dimension.** `dim_campaign` at the grain of a send batch: one row per `(sent_on, message_type)`, ten rows. Every send joins to its batch. Rejected: a batch has no attributes beyond its date and type. That is a degenerate dimension in Kimball's sense, and it belongs on the fact as `batch_date`, not in its own table.
+**Candidate 1, batch as the dimension.** `dim_campaign` at the grain of a send batch: one row per `(sent_on, message_type)`, ten rows. Every send joins to its batch. Rejected because a batch has no attributes beyond its date and type. That is a degenerate dimension in Kimball's sense, so it lives on the fact as `batch_date`.
 
 **Candidate 2, the sequence as the dimension.** `dim_campaign` at the grain of an outreach sequence: `pitch-b`, `research`, `pitch-c`. Three rows with real attributes: the variant name, what the call to action was, how many touches the sequence has, the first send date. A touch-2 email (`pitch-c-t2` in the raw log) is the same campaign at `touch_number = 2`. Chosen. The reply-rate mart still groups by the raw message type, because that is the table the campaign tracker keeps and the number a reader wants to check against it.
 
