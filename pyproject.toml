@@ -6,3 +6,8 @@ dependencies = [
     "dbt-core==1.12.4",
     "dbt-duckdb==1.11.0",
 ]
+
+[dependency-groups]
+ml = [
+    "xgboost==3.4.1",
+]
