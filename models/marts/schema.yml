@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: mart_weekly_funnel
+    description: One row per ISO week from the first send to the latest event, silent weeks included as zeros.
+    columns:
+      - name: week_start
+        tests: [unique, not_null]
+      - name: emails_sent
+        tests: [not_null]
+      - name: human_replies
+        tests: [not_null]
+  - name: mart_reply_rate_by_message_type
+    description: >
+      One row per raw message type. Mirrors the campaign tracker's "Sends by message type" table.
+      Human replies only; auto-acks and canned redirects are excluded. Below 50 sends the rate is noise.
+    columns:
+      - name: message_type
+        tests: [unique, not_null]
+      - name: sends
+        tests: [not_null]
+      - name: reply_rate
+        description: human_replies / delivered, null when nothing was delivered.
+  - name: mart_ml_training_set
+    description: >
+      One row per lead that received a first-touch email. Features are what was known about the lead
+      before the send; the label is whether a person replied to any touch.
+    columns:
+      - name: slug
+        tests: [unique, not_null]
+      - name: replied
+        tests: [not_null]
+      - name: campaign_id
+        tests: [not_null]
