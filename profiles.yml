@@ -1,0 +1,11 @@
+gtm_warehouse:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: warehouse/gtm.duckdb
+      threads: 4
+    test:
+      type: duckdb
+      path: "{{ env_var('GTM_TEST_DB', 'warehouse/test.duckdb') }}"
+      threads: 4

@@ -1,0 +1,86 @@
+version: 2
+
+models:
+  - name: stg_leads
+    description: One row per Shopify app listing, typed. The lead grain every dimension and fact resolves to.
+    columns:
+      - name: slug
+        description: Shopify app store slug, the natural key.
+        tests: [unique, not_null]
+      - name: tier
+        description: Outreach tier from final_tier.py. A is the target list.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [A, B, C, SKIP]
+      - name: contact_email
+        description: Best contact address found by merge_emails.py, lowercased, null when none.
+      - name: email_confidence
+        description: Where the address was found (HIGH = the company's own contact or privacy page). Not deliverability.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [HIGH, MED, LOW, NONE]
+      - name: verify_result
+        description: MillionVerifier result on 2026-08-16, null for addresses never submitted.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [ok, catch_all, invalid]
+      - name: launched_on
+        description: Listing launch date parsed from "Month D, YYYY".
+  - name: stg_lead_status
+    description: One row per unique contact address in the verification export, with outreach status on the export date.
+    columns:
+      - name: contact_email
+        tests: [unique, not_null]
+      - name: status
+        tests:
+          - accepted_values:
+              arguments:
+                values: [sent, unsent, queued, bounced]
+      - name: slug
+        description: The first app behind this address; the address-to-lead rule sends use.
+        tests: [not_null]
+  - name: stg_sends
+    description: One row per email sent, parsed from sent.txt.
+    columns:
+      - name: send_id
+        description: md5 of date, type, and address. One email per address per type per day.
+        tests: [unique, not_null]
+      - name: sent_on
+        tests: [not_null]
+      - name: message_type
+        tests:
+          - accepted_values:
+              arguments:
+                values: [pitch, research, pitch-c, pitch-c-t2]
+      - name: address
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_leads')
+                field: contact_email
+      - name: bounced
+        tests: [not_null]
+  - name: stg_replies
+    description: One row per inbound message from an address in the send log, parsed from replies.txt.
+    columns:
+      - name: reply_id
+        tests: [unique, not_null]
+      - name: received_on
+        tests: [not_null]
+      - name: kind
+        description: reply is a person answering; the other kinds are machine or canned responses and never count in a rate.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [reply, auto-ack, redirect, close]
+      - name: address
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_sends')
+                field: address

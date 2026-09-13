@@ -1,0 +1,26 @@
+version: 2
+
+sources:
+  - name: app_leads
+    description: >
+      Signet's Shopify app outreach files, copied into raw/<date>/ by bin/run.sh from
+      ~/signet/outreach/app-leads. Each run reads the raw/latest symlink.
+    meta:
+      dbt-osmosis: false
+    tables:
+      - name: merged
+        description: One row per Shopify app listing after scrape, tiering, email enrichment, and address verification.
+        meta:
+          external_location: "read_json_auto('{{ var('raw_dir') }}/merged.json')"
+      - name: verify_input
+        description: One row per unique contact address among tier A leads with a HIGH-confidence email, with the outreach status on the export date.
+        meta:
+          external_location: "read_csv('{{ var('raw_dir') }}/verify-input.csv', header=true)"
+      - name: sent
+        description: The send log, one line per email. Cache of the sender's Gmail Sent folder.
+        meta:
+          external_location: "read_csv('{{ var('raw_dir') }}/sent.txt', names=['line'], types=['VARCHAR'], delim='\x01', header=false, quote='', escape='')"
+      - name: replies
+        description: The inbox log, one line per inbound message from an address in the send log.
+        meta:
+          external_location: "read_csv('{{ var('raw_dir') }}/replies.txt', names=['line'], types=['VARCHAR'], delim='\x01', header=false, quote='', escape='')"
