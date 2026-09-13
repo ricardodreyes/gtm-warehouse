@@ -4,7 +4,8 @@
         unique_key='slug',
         strategy='check',
         check_cols=['tier', 'contact_email', 'email_confidence', 'verify_result', 'status'],
-        schema='snapshots'
+        schema='snapshots',
+        hard_deletes='invalidate'
     )
 }}
 select

@@ -21,7 +21,7 @@ FOLDS = 5
 
 CATEGORICAL = ["campaign_id", "tier", "email_confidence", "verify_result", "mailbox_role"]
 NUMERIC = ["declares_protected_customer_data", "has_ai_signal", "rating", "review_count",
-           "launched_year", "category_count", "bounced"]
+           "launched_year", "category_count"]
 
 
 def load():

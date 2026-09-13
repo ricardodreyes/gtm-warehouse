@@ -33,7 +33,7 @@ attributed as (
         on s.address = r.address
         and s.touch_number = 1
         and s.sent_on <= r.received_on
-    qualify row_number() over (partition by r.reply_id order by s.sent_on desc) = 1
+    qualify row_number() over (partition by r.reply_id order by s.sent_on desc, s.send_id) = 1
 )
 
 select

@@ -31,7 +31,7 @@ The raw files are not in the repo. They are the campaign's working files and the
         mart_weekly_funnel   mart_reply_rate_by_message_type   mart_ml_training_set
 ```
 
-`dim_lead` is a dbt snapshot. A lead gets a new version when its tier, contact address, address confidence, verification result, or outreach status changes. `fact_sends` carries the lead version in effect on the send date. `fact_replies` attributes each inbound message to the latest first-touch email to that address, which is the tracker's rule too.
+`dim_lead` is a dbt snapshot. A lead gets a new version when its tier, contact address, address confidence, verification result, or outreach status changes. `fact_sends` carries the lead version whose `valid_from` most recently precedes the send date, or the earliest version when the send came before the snapshot history began (today that is every send; the history starts 2026-09-13). `fact_replies` attributes each inbound message to the latest first-touch email to that address, which is the tracker's rule too.
 
 `docs/model.md` has the grain of every table and why I picked it, including the candidate I rejected. `dbt docs generate` builds the lineage graph from the same descriptions.
 
@@ -50,27 +50,27 @@ Every model has a description and at least one test. Two of the tests matter mor
 
 ## Rerun-safe
 
-`bin/check-idempotent.sh` runs the pipeline twice and diffs row counts per relation. This is the output from 2026-09-13:
+`bin/check-idempotent.sh` runs the pipeline twice over the same source files and diffs row count and a content hash per relation. This is the output from 2026-09-13:
 
 ```
-relation	run1	run2
-main.campaigns	3	3
-main.dim_campaign	3	3
-main.dim_date	579	579
-main.dim_lead	487	487
-main.fact_replies	10	10
-main.fact_sends	96	96
-main.mart_ml_training_set	79	79
-main.mart_reply_rate_by_message_type	4	4
-main.mart_weekly_funnel	5	5
-main.message_types	4	4
-main_snapshots.snap_leads	487	487
-main_staging.stg_lead_status	167	167
-main_staging.stg_leads	487	487
-main_staging.stg_replies	10	10
-main_staging.stg_sends	96	96
+relation	rows	md5(run1)	rows	md5(run2)
+main.campaigns	3	144113c5f883c1bee1d7a85e524a1933	3	144113c5f883c1bee1d7a85e524a1933
+main.dim_campaign	3	144113c5f883c1bee1d7a85e524a1933	3	144113c5f883c1bee1d7a85e524a1933
+main.dim_date	579	d1f301027b6687b72d8b34f5325e84a3	579	d1f301027b6687b72d8b34f5325e84a3
+main.dim_lead	487	99fbe8c49d6cac67c7242b227eb0c9dc	487	99fbe8c49d6cac67c7242b227eb0c9dc
+main.fact_replies	10	893d2f9c5c2b956460360864014f261b	10	893d2f9c5c2b956460360864014f261b
+main.fact_sends	96	2bd4fae80bb1b848afecf7cd6840ee3a	96	2bd4fae80bb1b848afecf7cd6840ee3a
+main.mart_ml_training_set	79	09cb3709eba01ae07d0ca963b69c37b1	79	09cb3709eba01ae07d0ca963b69c37b1
+main.mart_reply_rate_by_message_type	4	65ce204a7cf032e56a2ade8f5a97b701	4	65ce204a7cf032e56a2ade8f5a97b701
+main.mart_weekly_funnel	5	3b0fdf6948d9152fda0603a132649af2	5	3b0fdf6948d9152fda0603a132649af2
+main.message_types	4	72687a70040670225e11334eac2b3b98	4	72687a70040670225e11334eac2b3b98
+main_snapshots.snap_leads	487	71e9a27a2c93bbb10c9aebd2d0b5ffb6	487	71e9a27a2c93bbb10c9aebd2d0b5ffb6
+main_staging.stg_lead_status	167	a8f4f876b8a0e52bb29c256eee3314d4	167	a8f4f876b8a0e52bb29c256eee3314d4
+main_staging.stg_leads	487	c2355744abf90dd516a38713246baff5	487	c2355744abf90dd516a38713246baff5
+main_staging.stg_replies	10	202592bd7a3c09d479e1befde6024e1a	10	202592bd7a3c09d479e1befde6024e1a
+main_staging.stg_sends	96	f0c33f7ef265439877d495275379c93a	96	f0c33f7ef265439877d495275379c93a
 
-identical row counts across two consecutive runs
+identical row counts and content hashes across two consecutive runs
 ```
 
 The late-arriving fact is the reply. A person answers days after the send, sometimes after the next run has already happened. `fact_replies` is incremental with a 14-day lookback, so each run reprocesses the window and picks the reply up. `tests/test_late_reply.py` proves it: build with the one human reply removed from the raw file, put it back, run again, and the row count moves by exactly one. A third run leaves it there.
@@ -88,7 +88,7 @@ On Linux it is one cron line: `15 7 * * * /path/to/gtm-warehouse/bin/run.sh`.
 
 ## The ML mart
 
-`mart_ml_training_set` is one row per lead that got a first-touch email, with what I knew about the lead before sending (tier, whether the listing declares protected customer data, address verification, rating, review count, launch year, category count, which sequence) and the label `replied`.
+`mart_ml_training_set` is one row per lead that got a first-touch email, with the lead's attributes (tier, whether the listing declares protected customer data, address verification, rating, review count, launch year, category count, which sequence) and the label `replied`. Bounces and replies are outcomes, so they stay out of the features.
 
 `ml/train.py` fits an XGBoost classifier on it and appends a run to `ml/runs.jsonl`. The honest number is 79 rows and 1 positive. No held-out fold can contain a positive, so there is no out-of-sample AUC to report, and the script logs `auc: null` with that reason. The wiring is there and waits on data. When the mart has 5 replies the same script switches to 5-fold stratified cross-validation on its own.
 

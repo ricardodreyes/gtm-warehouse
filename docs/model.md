@@ -8,8 +8,10 @@ Why each table has the grain it has. Read this before adding a model.
 |---|---|---|---|
 | `merged.json` | one Shopify app listing | `slug` | 487 |
 | `verify-input.csv` | one contact address among tier A leads with a HIGH-confidence email | `email` | 167 |
-| `sent.txt` | one email sent | `(sent_on, message_type, address, ordinal)` | 96 |
-| `replies.txt` | one inbound message | `(received_on, kind, address, ordinal)` | 9 |
+| `sent.txt` | one email sent | `(sent_on, message_type, address)` | 96 |
+| `replies.txt` | one inbound message | `(received_on, kind, address)` | 10 |
+
+The send and reply logs have no time of day and no sequence number, so two emails of the same type to the same address on the same day would collide. A `unique` test on the hashed key fails the build the day that happens, which beats silently merging them.
 
 `merged.json` is the end of a scrape and enrichment chain (`candidates.json`, 1,642 rows, then `listings.json` and `final.json`, 487) and carries every field the earlier files have, so it is the only lead source loaded. `sent.txt` is a cache of the sender's Gmail Sent folder; `replies.txt` is the same shape for the inbox, transcribed from the dated rows in the campaign tracker and rebuilt from IMAP when in doubt.
 
@@ -31,11 +33,11 @@ A third shape, folding replies onto `fact_sends` as an accumulating snapshot, wa
 
 ## Facts
 
-**`fact_sends`**, one row per email sent. Keys: `lead_key` (the current `dim_lead` version at load time, resolved by address through `verify-input.csv`'s address-to-slug rule, then by first slug on name), `campaign_key`, `date_key`. Measures and flags: `bounced`, `touch_number`, `message_id`. `message_type` and `batch_date` are degenerate dimensions.
+**`fact_sends`**, one row per email sent. Keys: `lead_key` (the `dim_lead` version whose `valid_from` most recently precedes the send date, or the earliest version when the send predates the snapshot history; the address resolves to a slug through `verify-input.csv`, then by first slug), `campaign_id`, `date_day`. The snapshot history starts 2026-09-13, so every send loaded so far resolves to the first recorded version. That fallback records what was known after the send, and the training mart inherits the same limit. Measures and flags: `bounced`, `touch_number`, `message_id`. `message_type` and `batch_date` are degenerate dimensions.
 
-**`fact_replies`**, one row per inbound message. `kind` separates a human reply from a helpdesk auto-ack, a canned redirect, and a ticket close; only `reply` counts in any rate. Each row attributes to the touch-1 send of the same address that most recently precedes it, matching the tracker's rule that a reply to a follow-up logs against the original send. `days_to_reply` is measured from that send.
+**`fact_replies`**, one row per inbound message. `kind` separates a human reply from a helpdesk auto-ack, a canned redirect, and a ticket close; only `reply` counts in any rate. Each row attributes to the touch-1 send of the same address that most recently precedes it (ties broken by `send_id`), matching the tracker's rule that a reply to a follow-up logs against the original send. `days_to_reply` is measured from that send.
 
-This is the late-arriving fact. The model is incremental with a 14-day lookback: every run reprocesses inbound rows dated within 14 days of the newest row already loaded, so a reply that lands three days after its send is picked up by the next scheduled run without a full rebuild. `tests/test_late_reply.py` proves it by loading the raw files with one reply removed, running, restoring the row, running again, and asserting the row count moved by one.
+This is the late-arriving fact. The model is incremental with a 14-day lookback: every run reprocesses inbound rows dated within 14 days of the newest row already loaded, so a reply that lands three days after its send is picked up by the next scheduled run without a full rebuild. The window is anchored on the newest loaded reply, not on today. A row dated earlier than that window (a late transcription, a corrected date) needs `dbt build --full-refresh`. A mistyped future date would push the window forward and hide later rows. `tests/test_late_reply.py` proves it by loading the raw files with one reply removed, running, restoring the row, running again, and asserting the row count moved by one.
 
 ## Marts
 
@@ -43,7 +45,7 @@ This is the late-arriving fact. The model is incremental with a 14-day lookback:
 
 **`mart_reply_rate_by_message_type`**, one row per raw message type. Sends, bounced, delivered, replies, reply rate. Mirrors the tracker's "Sends by message type" table so the two can be diffed.
 
-**`mart_ml_training_set`**, one row per lead that received a touch-1 send, with lead features known before the send (tier, PCD declaration, verification result, email confidence, rating, review count, launch year, category count, campaign) and the label `replied`. Nothing that happens after the send is a feature. The set is small; see the README for what that means for the model.
+**`mart_ml_training_set`**, one row per lead that received a touch-1 send, with lead attributes from the dimension version the send resolved to (tier, PCD declaration, verification result, email confidence, rating, review count, launch year, category count, campaign) and the label `replied`. Bounces and replies are outcomes and stay out of the features. The set is small; see the README for what that means for the model.
 
 ## What is not modeled and why
 
