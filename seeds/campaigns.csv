@@ -1,0 +1,4 @@
+campaign_id,campaign_name,variant,call_to_action,touches,first_sent_on,description
+pitch-b,Pitch variant B,B,curl against the demo redaction endpoint,1,2026-08-13,Cold pitch. The email is a command the recipient can run against POST /demo/redact on their own payload.
+research,Discovery,discovery,one question about past behavior,1,2026-08-16,Interview ask. No pitch in touch one; one question per touch about how the team handles protected customer data today.
+pitch-c,Pitch variant C,C,forward-ask to whoever filled in the Shopify data declaration,2,2026-09-01,Question about the listing's protected customer data declaration. Touch 2 on day 4 threads under touch 1 by In-Reply-To.

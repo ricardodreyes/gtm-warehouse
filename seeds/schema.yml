@@ -1,0 +1,22 @@
+version: 2
+
+seeds:
+  - name: campaigns
+    description: One row per outreach sequence. Editorial attributes the send log does not carry.
+    config:
+      column_types:
+        first_sent_on: date
+    columns:
+      - name: campaign_id
+        tests: [unique, not_null]
+  - name: message_types
+    description: Maps each raw message type token in sent.txt to its campaign and touch number.
+    columns:
+      - name: message_type
+        tests: [unique, not_null]
+      - name: campaign_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('campaigns')
+                field: campaign_id

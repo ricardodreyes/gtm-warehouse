@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: dim_lead
+    description: >
+      Type 2 slowly changing lead dimension. One row per lead per version; a new version opens
+      whenever tier, contact_email, email_confidence, verify_result, or status changes in the source.
+    columns:
+      - name: lead_key
+        description: Surrogate key, md5 of slug and valid_from.
+        tests: [unique, not_null]
+      - name: slug
+        tests: [not_null]
+      - name: status
+        description: Outreach status from the verification export; none for leads outside it.
+        tests:
+          - accepted_values:
+              arguments:
+                values: [sent, unsent, queued, bounced, none]
+      - name: valid_from
+        tests: [not_null]
+      - name: is_current
+        tests: [not_null]
+  - name: dim_date
+    description: One row per calendar day, 2026-06-01 through 2027-12-31. ISO weeks, Monday start.
+    columns:
+      - name: date_day
+        tests: [unique, not_null]
+      - name: week_start
+        tests: [not_null]
+  - name: dim_campaign
+    description: One row per outreach sequence.
+    columns:
+      - name: campaign_id
+        tests: [unique, not_null]
