@@ -1,0 +1,78 @@
+version: 2
+
+models:
+  - name: fact_sends
+    description: >
+      One row per email sent. Each row carries the dim_lead version in effect on the send date,
+      or the earliest version when the send predates the snapshot history.
+    columns:
+      - name: send_id
+        tests: [unique, not_null]
+      - name: lead_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_lead')
+                field: lead_key
+      - name: campaign_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_campaign')
+                field: campaign_id
+      - name: date_day
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
+      - name: message_type
+        description: Degenerate dimension, the raw token from sent.txt.
+        tests: [not_null]
+      - name: touch_number
+        tests: [not_null]
+      - name: bounced
+        tests: [not_null]
+      - name: delivered
+        tests: [not_null]
+  - name: fact_replies
+    description: >
+      One row per inbound message, attributed to the most recent touch-1 send to the same address.
+      Incremental with a lookback window (var reply_lookback_days) so a reply that lands days after
+      its send is picked up by the next run.
+    columns:
+      - name: reply_id
+        tests: [unique, not_null]
+      - name: send_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fact_sends')
+                field: send_id
+      - name: lead_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_lead')
+                field: lead_key
+      - name: date_day
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_day
+      - name: kind
+        tests:
+          - accepted_values:
+              arguments:
+                values: [reply, auto-ack, redirect, close]
+      - name: is_human_reply
+        tests: [not_null]
+      - name: days_to_reply
+        description: Days from the attributed send to the inbound message. Never negative.
+        tests: [not_null]
