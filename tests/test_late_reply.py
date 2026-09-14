@@ -6,6 +6,8 @@ import subprocess
 import tempfile
 import unittest
 
+import duckdb
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
@@ -17,22 +19,21 @@ def human_reply_row(replies_file):
 def dbt(args, raw_dir, db):
     env = dict(os.environ, GTM_TEST_DB=str(db))
     subprocess.run(
-        ["uv", "run", "dbt", *args, "--target", "test", "--vars", f"{{raw_dir: '{raw_dir}'}}"],
+        ["uv", "run", "dbt", *args, "--target", "test", "--vars", f"{{raw_dir: '{raw_dir}'}}", "--target-path", str(db.parent / "target"), "--log-path", str(db.parent / "logs")],
         cwd=ROOT, env=env, check=True, capture_output=True, text=True,
     )
 
 
 def count(db, sql):
-    out = subprocess.run(["duckdb", str(db), "-csv", "-noheader", "-c", sql],
-                         capture_output=True, text=True, check=True).stdout.strip()
-    return int(out)
+    with duckdb.connect(str(db), read_only=True) as con:
+        return con.execute(sql).fetchone()[0]
 
 
 class LateReply(unittest.TestCase):
     def test_late_reply_is_captured_on_next_run(self):
         with tempfile.TemporaryDirectory() as tmp:
             raw = pathlib.Path(tmp) / "raw"
-            shutil.copytree(ROOT / "raw" / "latest", raw)
+            shutil.copytree(ROOT / "examples" / "synthetic", raw)
             db = pathlib.Path(tmp) / "test.duckdb"
             replies = raw / "replies.txt"
             full = replies.read_text()
