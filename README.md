@@ -35,16 +35,27 @@ The raw files are not in the repo. They are the campaign's working files and the
 
 `docs/model.md` has the grain of every table and why I picked it, including the candidate I rejected. `dbt docs generate` builds the lineage graph from the same descriptions.
 
-## How to run it
+## Try it with synthetic data
 
-```
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+
+```sh
 uv sync
-bin/run.sh                  # snapshot raw files, dbt build, log to logs/
-uv run dbt build            # models, snapshot, seeds, tests: 91 checks
-uv run python -m unittest tests/test_late_reply.py
+uv run python bin/demo.py
+uv run python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-`bin/run.sh` needs the source files at `~/signet/outreach/app-leads` or wherever `GTM_RAW_SRC` points. Without them, `uv run dbt build` still works against the last snapshot under `raw/`.
+The checked-in [synthetic fixture](examples/synthetic/) contains five fictional leads and six sends using example.com addresses. It includes a bounce, an automatic response, and a human reply after a follow-up. The demo checks the attribution and identical row counts/content hashes across two builds. The test removes the human reply, restores it, and proves the incremental model picks it up exactly once.
+
+Everything runs in a temporary database. No credentials, outreach files, or DuckDB CLI are required. These are invented examples, not campaign results.
+
+## Run the private campaign pipeline
+
+```sh
+bin/run.sh
+```
+
+This command requires my source files at `~/signet/outreach/app-leads`, or a directory set with `GTM_RAW_SRC`. They are intentionally absent from a fresh clone. After taking a snapshot, `uv run dbt build` can reuse it. The build currently includes 76 data tests within 91 total dbt nodes.
 
 Every model has a description and at least one test. Two of the tests matter more than the rest: `assert_send_counts_match_log` fails if a send is dropped or duplicated between the raw log and the fact, and `assert_funnel_sums_match_facts` fails if the weekly mart drifts from the facts it rolls up.
 
@@ -73,7 +84,7 @@ main_staging.stg_sends	96	f0c33f7ef265439877d495275379c93a	96	f0c33f7ef265439877
 identical row counts and content hashes across two consecutive runs
 ```
 
-The late-arriving fact is the reply. A person answers days after the send, sometimes after the next run has already happened. `fact_replies` is incremental with a 14-day lookback, so each run reprocesses the window and picks the reply up. `tests/test_late_reply.py` proves it: build with the one human reply removed from the raw file, put it back, run again, and the row count moves by exactly one. A third run leaves it there.
+The late-arriving fact is the reply. A person answers days after the send, sometimes after the next run has already happened. `fact_replies` is incremental with a 14-day lookback, so each run reprocesses the window and picks the reply up. `tests/test_late_reply.py` proves it: build the synthetic fixture with its human reply removed, put it back, run again, and the row count moves by exactly one. A third run leaves it there.
 
 ## Scheduled
 

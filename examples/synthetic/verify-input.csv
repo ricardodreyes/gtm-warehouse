@@ -1,0 +1,6 @@
+email,priority,status,slug,app,source
+alpha@example.com,1,sent,demo-alpha,Demo Alpha,synthetic fixture
+beta@example.com,1,bounced,demo-beta,Demo Beta,synthetic fixture
+gamma@example.com,1,sent,demo-gamma,Demo Gamma,synthetic fixture
+delta@example.com,1,sent,demo-delta,Demo Delta,synthetic fixture
+epsilon@example.com,1,sent,demo-epsilon,Demo Epsilon,synthetic fixture

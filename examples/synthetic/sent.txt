@@ -1,0 +1,7 @@
+# Synthetic records. No messages were sent.
+2026-09-01 pitch alpha@example.com <demo-1@example.com>
+2026-09-01 pitch beta@example.com bounced
+2026-09-02 research gamma@example.com <demo-3@example.com>
+2026-09-03 pitch-c delta@example.com <demo-4@example.com>
+2026-09-08 pitch-c-t2 delta@example.com <demo-5@example.com>
+2026-09-08 research epsilon@example.com <demo-6@example.com>
