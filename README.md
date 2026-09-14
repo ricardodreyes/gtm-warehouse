@@ -40,7 +40,7 @@ The raw files are not in the repo. They are the campaign's working files and the
 ```
 uv sync
 bin/run.sh                  # snapshot raw files, dbt build, log to logs/
-uv run dbt build            # models, snapshot, seeds, tests: 90 checks
+uv run dbt build            # models, snapshot, seeds, tests: 91 checks
 uv run python -m unittest tests/test_late_reply.py
 ```
 

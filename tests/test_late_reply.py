@@ -7,7 +7,11 @@ import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-LATE_ROW = "2026-09-01 reply privacy@octaneai.com\n"
+
+
+def human_reply_row(replies_file):
+    rows = [l for l in replies_file.read_text().splitlines() if l.split(" ")[1:2] == ["reply"]]
+    return rows[-1] + "\n"
 
 
 def dbt(args, raw_dir, db):
@@ -32,8 +36,8 @@ class LateReply(unittest.TestCase):
             db = pathlib.Path(tmp) / "test.duckdb"
             replies = raw / "replies.txt"
             full = replies.read_text()
-            self.assertIn(LATE_ROW, full)
-            replies.write_text(full.replace(LATE_ROW, ""))
+            late_row = human_reply_row(replies)
+            replies.write_text(full.replace(late_row, ""))
 
             dbt(["build"], raw, db)
             before = count(db, "select count(*) from fact_replies")
