@@ -1,0 +1,2 @@
+*.sql linguist-detectable=true
+deploy/wizard.sh linguist-vendored
